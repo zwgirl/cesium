@@ -7,7 +7,6 @@ module.exports = {
         browser: true
     },
     rules: {
-        'no-implicit-globals': 'error',
-        "no-prototype-builtins": "off"
+        'no-implicit-globals': 'error'
     }
 };
