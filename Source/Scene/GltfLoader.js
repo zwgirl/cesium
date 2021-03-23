@@ -612,13 +612,114 @@ function process(loader, gltf, supportedImageFormats) {
     });
     featureMetadata.load();
     promises.push(featureMetadata.promise);
+    model.featureMetadata = featureMetadata;
   }
 
   return model;
 }
 
-function update(loader) {
-  // TODO
+function updateVertexAttribute(attribute) {
+  attribute.cacheResource.update();
+  attribute.vertexBuffer = attribute.cacheResource.vertexBuffer;
+}
+
+function updateIndices(indices) {
+  indices.cacheResource.update();
+  indices.indexBuffer = indices.cacheResource.indexBuffer;
+}
+
+function updateTexture(texture) {
+  texture.cacheResource.update();
+  texture.texture = texture.cacheResource.texture;
+}
+
+function updateNode(loader, node, frameState) {
+  var i;
+  var j;
+  var k;
+
+  var mesh = node.mesh;
+  if (defined(mesh)) {
+    var primitives = mesh.primitives;
+    var primitivesLength = primitives.length;
+    for (i = 0; i < primitivesLength; ++i) {
+      var primitive = primitives[i];
+      var vertexAttributes = primitive.vertexAttributes;
+      var vertexAttributesLength = vertexAttributes.length;
+      for (j = 0; j < vertexAttributesLength; ++j) {
+        var vertexAttribute = vertexAttributes[j];
+        updateVertexAttribute(vertexAttribute);
+      }
+      var morphTargets = primitive.morphTargets;
+      var morphTargetsLength = morphTargets.length;
+      for (j = 0; j < morphTargetsLength; ++j) {
+        var morphTarget = morphTargets[j];
+        var morphVertexAttributes = morphTarget.vertexAttributes;
+        var morphVertexAttributesLength = morphVertexAttributes.length;
+        for (k = 0; k < morphVertexAttributesLength; ++k) {
+          var morphVertexAttribute = morphVertexAttributes[k];
+          updateVertexAttribute(morphVertexAttribute);
+        }
+      }
+      var indices = primitive.indices;
+      if (defined(indices)) {
+        updateIndices(indices);
+      }
+      var material = primitive.material;
+      if (defined(material)) {
+        if (defined(material.baseColorTexture)) {
+          updateTexture(material.baseColorTexture);
+        }
+        if (defined(material.metallicRoughnessTexture)) {
+          updateTexture(material.metallicRoughnessTexture);
+        }
+        if (defined(material.diffuseTexture)) {
+          updateTexture(material.diffuseTexture);
+        }
+        if (defined(material.specularGlossinessTexture)) {
+          updateTexture(material.specularGlossinessTexture);
+        }
+        if (defined(material.emissiveTexture)) {
+          updateTexture(material.emissiveTexture);
+        }
+        if (defined(material.normalTexture)) {
+          updateTexture(material.normalTexture);
+        }
+        if (defined(material.occlusionTexture)) {
+          updateTexture(material.occlusionTexture);
+        }
+      }
+    }
+  }
+
+  var instances = node.instances;
+  if (defined(instances)) {
+    var instanceAttributes = instances.instanceAttributes;
+    var instanceAttributesLength = instanceAttributes.length;
+    for (i = 0; i < instanceAttributesLength; ++i) {
+      var instanceAttribute = instanceAttributes[i];
+      var instanceAttributeCacheResource = instanceAttribute.cacheResource;
+      instanceAttributeCacheResource.update();
+      instanceAttribute.vertexBuffer =
+        instanceAttributeCacheResource.vertexBuffer;
+    }
+  }
+
+  // Recurse over children
+  var childrenLength = node.children.length;
+  for (i = 0; i < childrenLength; ++i) {
+    var child = node.children[i];
+    updateNode(loader, child, frameState);
+  }
+}
+
+function update(loader, frameState) {
+  var model = loader._modelRuntime;
+  var nodes = model.nodes;
+  var nodesLength = nodes.length;
+  for (var i = 0; i < nodesLength; ++i) {
+    updateNode(loader, nodes[i], frameState);
+  }
 }
 
 function unload(loader) {
